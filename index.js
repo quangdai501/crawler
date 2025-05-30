@@ -1,2 +1,5 @@
 import { crawler } from "./crawler.js";
-crawler()
+
+crawler((res = []) => {
+  console.log(res.length);
+});

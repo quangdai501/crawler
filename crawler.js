@@ -13,14 +13,27 @@ async function crawlData() {
 
   await page.waitForSelector("#containerKQKeno");
 
-  const kenoDataPageOne = await getKenoNumbers();
+  const totalPage = await page.evaluate(() => {
+    const pageNavList = Array.from(
+      document.querySelectorAll("#pagenav .pagenav li")
+    );
+    const hrefText = pageNavList[pageNavList.length - 1]
+      .querySelector("a")
+      .getAttribute("href");
+
+    for (const char of hrefText) {
+      if (!isNaN(char)) return char;
+    }
+  });
+
+  let kenoData = await getKenoNumbers();
 
   //navigate to page 2
-
-  await page.evaluate(() => chosePage(2));
-  await page.waitForSelector("#containerKQKeno");
-
-  const kenoDataPageTwo = await getKenoNumbers();
+  for (let i = 2; i <= totalPage; i++) {
+    await page.evaluate((pageNum) => chosePage(pageNum), i);
+    await page.waitForSelector("#containerKQKeno");
+    kenoData.push(...(await getKenoNumbers()));
+  }
 
   async function getKenoNumbers() {
     return await page.evaluate(() => {
@@ -46,20 +59,27 @@ async function crawlData() {
     });
   }
 
-  console.log([...kenoDataPageOne, ...kenoDataPageTwo]);
-
-  await browser.close();
+  return kenoData;
 }
 
-async function crawler() {
-  await crawlData();
+function crawler(getData) {
+  (async () => {
+    //initial Data
+    const data = await crawlData();
+    getData(data);
 
-  page.on("framenavigated", async (frame) => {
-    if (frame === page.mainFrame() && !isHandlingReload) {
-      isHandlingReload = true;
-      await crawlData();
-      isHandlingReload = false;
-    }
-  });
+    //new Data on reload
+    let isHandlingReload = false;
+    page.on("framenavigated", async (frame) => {
+      if (frame === page.mainFrame() && !isHandlingReload) {
+        isHandlingReload = true;
+
+        const data = await crawlData();
+        getData(data);
+
+        isHandlingReload = false;
+      }
+    });
+  })();
 }
 export { crawler };
