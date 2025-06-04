@@ -21,14 +21,12 @@ async function crawlData() {
       .querySelector("a")
       .getAttribute("href");
 
-    for (const char of hrefText) {
-      if (!isNaN(char)) return char;
-    }
+    const page = hrefText.match(/\((\d+)\)/);
+    return Number(page[1]);
   });
 
   let kenoData = await getKenoNumbers();
 
-  //navigate to page 2
   for (let i = 2; i <= totalPage; i++) {
     await page.evaluate((pageNum) => chosePage(pageNum), i);
     await page.waitForSelector("#containerKQKeno");
